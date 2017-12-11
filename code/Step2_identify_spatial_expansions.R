@@ -18,7 +18,7 @@ datadir <- "data"
 plotdir <- "figures"
 
 # Load data
-load(paste(datadir, "2012-13-17_WDPA_time_series.Rdata", sep="/"))
+load(paste(datadir, "2004-17_WDPA_time_series.Rdata", sep="/"))
 
 # Convert data
 ################################################################################
