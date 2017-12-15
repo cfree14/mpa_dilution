@@ -14,8 +14,8 @@ library(dplyr)
 library(reshape2)
 
 # Directories
-datadir <- "/Users/cfree/Dropbox/Chris/Rutgers/projects/mpa_sesync/mpa_dilution/data"
-plotdir <- "/Users/cfree/Dropbox/Chris/Rutgers/projects/mpa_sesync/mpa_dilution/figures"
+datadir <- "data"
+plotdir <- "figures"
 
 # Load data
 load(paste(datadir, "2004-17_WDPA_time_series.Rdata", sep="/"))

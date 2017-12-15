@@ -14,17 +14,21 @@ library(dplyr)
 library(reshape2)
 
 # Directories
-datadir <- "/Users/cfree/Dropbox/Chris/Rutgers/projects/mpa_sesync/dilution/data"
+datadir <- "data"
+plotdir <- "figures"
 
 # Load data
-load(paste(datadir, "2012-13-17_WDPA_time_series.Rdata", sep="/"))
+load(paste(datadir, "2004-17_WDPA_time_series.Rdata", sep="/"))
 
 
 # Build data
 ################################################################################
 
+# Subset marine
+wdpa_ts_m <- filter(wdpa_ts, marine %in% c(1,2) & status %in% c("Designated", "Established")) 
+
 # Identify years
-years <- sort(unique(wdpa_ts_use$year))
+years <- sort(unique(wdpa_ts_m$year))
 
 # Loop through years to identify additions and reductions: i <- 2
 for(i in 2:length(years)){
@@ -32,19 +36,20 @@ for(i in 2:length(years)){
   # Years
   year_now <- years[i]
   year_last <- years[i-1]
-  mpaids_now <- sort(unique(wdpa_ts_use$wdpa_pid[wdpa_ts_use$year==year_now]))
-  mpaids_last <- sort(unique(wdpa_ts_use$wdpa_pid[wdpa_ts_use$year==year_last]))
+  mpaids_now <- sort(unique(wdpa_ts_m$wdpa_pid[wdpa_ts_m$year==year_now]))
+  mpaids_last <- sort(unique(wdpa_ts_m$wdpa_pid[wdpa_ts_m$year==year_last]))
+  print(year_now)
   
   # MPAs added and lost
   mpaids_added <- mpaids_now[!(mpaids_now%in%mpaids_last)]
   mpaids_lost <- mpaids_last[!(mpaids_last%in%mpaids_now)]
-  mpas_added <- wdpa_ts_use %>% 
+  mpas_added <- wdpa_ts_m %>% 
     filter(year==year_now) %>% 
     filter(wdpa_pid %in% mpaids_added) %>% 
     mutate(year=paste(year_last, year_now, sep="-"),
            change_type="added") %>% 
     select(year, change_type, everything())
-  mpas_lost <- wdpa_ts_use %>% 
+  mpas_lost <- wdpa_ts_m %>% 
     filter(year==year_last) %>% 
     filter(wdpa_pid %in% mpaids_lost) %>% 
     mutate(year=paste(year_last, year_now, sep="-"),
@@ -64,24 +69,10 @@ for(i in 2:length(years)){
   }
 }
 
-# Stats
-stats <- mpas_changed_all %>% 
-  group_by(year) %>% 
-  summarise(n_added=sum(change_type=="added"),
-            sqkm_added=sum(rep_m_area[change_type=="added"]),
-            n_lost=sum(change_type=="lost"),
-            sqkm_lost=sum(rep_m_area[change_type=="lost"]),
-            n_net=n_added-n_lost,
-            sqkm_net=sqkm_added-sqkm_lost)
+# Export data
+################################################################################
 
-# Stats by country
-stats_cnty <- mpas_changed_all %>% 
-  group_by(year, country) %>% 
-  summarise(n_added=sum(change_type=="added"),
-            sqkm_added=sum(rep_m_area[change_type=="added"]),
-            n_lost=sum(change_type=="lost"),
-            sqkm_lost=sum(rep_m_area[change_type=="lost"]),
-            n_net=n_added-n_lost,
-            sqkm_net=sqkm_added-sqkm_lost)
-
+# Export data
+save(mpas_lost_all, mpas_added_all, mpas_changed_all,
+     file=paste(datadir, "2014-17_network_change_events_marine.Rdata", sep="/"))
 
