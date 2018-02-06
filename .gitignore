@@ -3,4 +3,5 @@
 .RData
 .Ruserdata
 data/wdpa_dbfs
-WDPA_Dec2017-shapefile
+data/wdpa_dbfs_2008
+data/WDPA_Dec2017-shapefile
