@@ -25,7 +25,7 @@ load(paste(datadir, "2004-17_WDPA_time_series.Rdata", sep="/"))
 ################################################################################
 
 # Subset marine
-wdpa_ts_m <- filter(wdpa_ts, marine %in% c(1,2) & status %in% c("Designated", "Established")) 
+wdpa_ts_m <- filter(wdpa_ts, marine %in% c("1", "2", "yes") & status %in% c("designated", "established")) 
 
 # Identify years
 years <- sort(unique(wdpa_ts_m$year))
@@ -73,6 +73,7 @@ for(i in 2:length(years)){
 ################################################################################
 
 # Export data
+write.csv( mpas_changed_all, paste(datadir, "2004-17_network_change_events_marine.csv", sep="/"), row.names=F)
 save(mpas_lost_all, mpas_added_all, mpas_changed_all,
      file=paste(datadir, "2014-17_network_change_events_marine.Rdata", sep="/"))
 

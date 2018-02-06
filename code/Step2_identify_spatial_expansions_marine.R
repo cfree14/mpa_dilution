@@ -20,13 +20,28 @@ plotdir <- "figures"
 # Load data
 load(paste(datadir, "2004-17_WDPA_time_series.Rdata", sep="/"))
 
+# Inspect WDPA pre-2010
+################################################################################
+
+# Subset pre-2010
+wdpa_old <- wdpa_ts %>% 
+  filter(year < 2010)
+
+# Inspect pre-2010 columns
+table(wdpa_old$status) # "designated" present
+table(wdpa_old$marine) # Uses "yes" and "N" instead of 1 and 2
+range(wdpa_old$rep_m_area, na.rm=T) # no reported marine area
+range(wdpa_old$gis_m_area, na.rm=T) # no GIS marine area
+range(wdpa_old$rep_area, na.rm=T)
+range(wdpa_old$gis_area, na.rm=T)
+
 
 # Convert data
 ################################################################################
 
 # Subset terrestrial/marine
-wdpa_ts_m <- filter(wdpa_ts, marine %in% c(1,2) & status %in% c("Designated", "Established")) 
-wdpa_ts_t <- filter(wdpa_ts, marine %in% c(0,1) & status %in% c("Designated", "Established")) 
+wdpa_ts_m <- filter(wdpa_ts, marine %in% c("1", "2", "yes") & status %in% c("designated", "established")) 
+wdpa_ts_t <- filter(wdpa_ts, marine %in% c(0, 1) & status %in% c("designated", "established")) 
 
 # Reshape data for quick visualization
 # Area terms: rep_area, rep_m_area, gis_area, gis_m_area, no_tk_area
