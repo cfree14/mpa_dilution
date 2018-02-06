@@ -253,7 +253,7 @@ table(wdpa_key$wdpa_yr)
 barplot(table(wdpa_key$wdpa_yr))
   
 
-# Final formats on TS
+# Final clean up
 ################################################################################
 
 # Inspect data
@@ -265,6 +265,12 @@ table(wdpa_ts$marine)
 table(wdpa_ts$no_take)
 table(wdpa_ts$status)
 table(wdpa_ts$gov_type) # needs lots of formatting - not worth my time
+
+# Pre-2010
+wdpa_old <- subset(wdpa_ts, year < 2010)
+table(wdpa_old$marine)
+range(wdpa_old$rep_m_area, na.rm=T)
+range(wdpa_old$gis_m_area, na.rm=T)
 
 # Final formatting
 wdpa_ts_final <- wdpa_ts %>%
@@ -281,19 +287,35 @@ wdpa_ts_final <- wdpa_ts %>%
                                  "No"="0",
                                  "true"="yes", 
                                  "Y"="yes",
-                                 "Not Reported"="not reported")),
+                                 "Not Reported"="not reported",
+                                 "\033"="unknown")),
          no_take=tolower(no_take),
          status=revalue(status, c("Designated\xa0"="Designated",
                                   "Desiganted"="Designated", 
                                   "OB@\xa0\\T\x8e"="Unknown")),
-         status=tolower(status))
+         status=tolower(status),
+         # Calculate marine area for pre-2010 WDPA
+         # If pre-2010 and it is a marine MPA, marine area is equivalent to all area
+         rep_m_area=ifelse(year<2010 & marine=="yes", rep_area, 0),
+         gis_m_area=ifelse(year<2010 & marine=="yes", gis_area, 0),
+         # Calculate terrestrial area
+         rep_t_area=rep_area-rep_m_area,
+         gis_t_area=gis_area-gis_m_area)
 
-# Overwrite
-wdpa_ts_merge <- wdpa_ts
-wdpa_ts <- wdpa_ts_final
+
+# Inspect formatting
+table(wdpa_ts_final$iucn_cat)
+table(wdpa_ts_final$marine)
+table(wdpa_ts_final$no_take)
+table(wdpa_ts_final$status)
+
 
 # Export data
 ################################################################################
+
+# Rename final file for export
+wdpa_ts_merge <- wdpa_ts
+wdpa_ts <- wdpa_ts_final
 
 # Export
 save(wdpa_ts, wdpa_key,
