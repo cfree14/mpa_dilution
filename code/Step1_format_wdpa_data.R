@@ -22,17 +22,18 @@ wdpadir <- "data/wdpa_dbfs"
 wdpadir08 <- "data/wdpa_dbfs_2008"
 wdpadir17 <- "data/WDPA_Dec2017-shapefile"
 
-
-# Inspect 2016 data
-################################################################################
-
-# After inspecting this data, I've decided to use the basic pt and poly files in analysis.
-
-# Data files
+# Data notes
 # 1998 point data only
 # 2001 missing all data
 # 2008 schema does not match others
 # 2016 has four files (pt + poly buffers)
+
+# Inspect 2016 data
+################################################################################
+
+# After inspecting the 2016 data, I've decided to use the basic pt and poly files in analysis.
+
+# Data files
 dbfs <- list.files(wdpadir)
 
 # Learn about 2016 data
@@ -60,17 +61,14 @@ sum(poly16$WDPA_PID%in%poly16buff$WDPA_PID)==nrow(poly16) # all polys in poly bu
 sum(pt16$WDPA_PID%in%poly16buff$WDPA_PID) # all 15344 buffered points are already in poly16?
 
 # Here's what is happening:
-# poly16buff = poly16 + pt16buff
 # 2016_pnt = 18,975 points
 # 2016_poly = 210,618 polygons
 # 2016_buffpnt = 15,344 of 18,975 with radii (for buffers)
 # 2016_polybuffpnt = 210,618 polygons + 15,344 buffered points = 225,962 total polygons
-
+# Take away: use the simple pt and poly files
 
 # Inspect 2008 data
 ################################################################################
-
-# After inspecting this data, I've decided it is too messy to include in analysis.
 
 # Read 2008 data
 pt08 <- read.dbf(paste(wdpadir08, "v1_01_2008_Pnt.dbf", sep="/"), as.is=T)
@@ -97,23 +95,42 @@ poly08 <- poly08 %>%
 # Further investgation revealed that "doc_area_h" has more points than "rep_area" 
 # and contains all of "rep_area"s points
 mpas08 <- rbind.fill(pt08, poly08) %>% 
+  # Rename columns
   rename(wdpaid=site_id,
          name=name_eng,
          orig_name=name_loc,
          iucn_cat=iucncat,
-         rep_area1=rep_area, # in hectares? same as doc_area_h?
-         rep_area=doc_area_h, # in hectares?
-         gis_area=gis_area_h, # in hectares?
-         rep_m_area=doc_m_area, # in hectares?
+         rep_area1=rep_area, # in hectares
+         rep_area=doc_area_h, # in hectares
+         gis_area=gis_area_h, # in hectares
+         rep_m_area=doc_m_area, # in hectares
          gov_type=govn_type, 
          marine=marine_c, 
          desig_type=sitetype) %>% 
+  # Rearrange columns
   select(shp_type, year, wdpaid, name, orig_name, desig_eng, int_crit, status, status_yr, iucn_cat,
          rep_area, rep_area1, gis_area, rep_m_area, gis_m_area, no_take, no_tk_area, gov_type, 
          mang_auth, own_type, marine, desig_type, country, iso3) %>% 
+  # Create final "reported area" column
   mutate(rep_area=ifelse(is.na(rep_area), rep_area1, rep_area),
-         iso3=countrycode(iso3, "country.name", "iso3c")) %>% 
-  select(-rep_area1)
+         iso3=countrycode(iso3, "country.name", "iso3c"),
+         wdpa_pid=wdpaid) %>% 
+  select(-rep_area1, country) %>% 
+  # Convert areas from hectares to square kilometers
+  mutate(rep_area=rep_area/100,
+         gis_area=gis_area/100,
+         rep_m_area=rep_m_area/100,
+         gis_m_area=gis_m_area/100,
+         no_tk_area=no_tk_area/100)
+
+# Any duplicated WDPAIDs? 
+anyDuplicated(mpas08$wdpaid)
+
+# Compare 2008 areas against 2016 areas to understand units
+# (this revealed that the 2008 WDPA was in hectares and had to be converted to sq. km)
+area_check <- select(mpas08, wdpa_pid, rep_area, gis_area, rep_m_area, gis_m_area) %>% 
+  left_join(select(poly16, WDPA_PID, REP_AREA, GIS_AREA, REP_M_AREA, GIS_M_AREA), by=c("wdpa_pid"="WDPA_PID")) %>% 
+  filter(!is.na(REP_AREA))
 
 
 # Helper functions
@@ -161,7 +178,7 @@ format_wdpa_data <- function(polys, pts, year){
 ################################################################################
 
 # Years
-years <- c(2004:2007, 2009:2017)
+years <- 2004:2017
 
 # Loop through years: i <- 13
 wdpa_versions <- list()
@@ -170,10 +187,13 @@ for(i in 1:length(years)){
   # Read data
   yr <- years[i]
   print(yr)
+  # Read 2017 data
   if(yr==2017){
     pnts <- read.dbf(paste(wdpadir17, "WDPA_Dec2017-shapefile-points.dbf", sep="/"), as.is=T)
     polys <- read.dbf(paste(wdpadir17, "WDPA_Dec2017-shapefile-polygons.dbf", sep="/"), as.is=T)
-  }else{
+  }
+  # Read 2004-2007 & 2009-2016 data (2008 formatted above)
+  if(!yr%in%c(2008,2017)){
     pt_file <- paste0("temp_wdpa_v2_01_yr_", yr, "_temp_wdpa_v2_01_yr_", yr, "_pnt.dbf")
     poly_file <- paste0("temp_wdpa_v2_01_yr_", yr, "_temp_wdpa_v2_01_yr_", yr, "_poly.dbf")
     pnts <- read.dbf(paste(wdpadir, pt_file, sep="/"), as.is=T)
@@ -181,10 +201,14 @@ for(i in 1:length(years)){
   }
   
   # Format MPAs
-  mpas <- format_wdpa_data(polys, pnts, yr)
-  wdpa_versions[[i]] <- mpas
+  if(yr==2008){
+    mpas <- mpas08
+  }else{
+    mpas <- format_wdpa_data(polys, pnts, yr)
+  }
   
   # Merge formatted MPAs
+  wdpa_versions[[i]] <- mpas
   if(i==1){wdpa_ts_orig <- mpas}else{wdpa_ts_orig <- rbind.fill(wdpa_ts_orig, mpas)}
   
 }
@@ -248,6 +272,12 @@ wdpa_key <- wdpa_key %>%
 wdpa_key[duplicated(wdpa_key$wdpa_pid),]
 wdpa_key[wdpa_key$wdpa_pid==41057,]
 
+# Fix duplicates
+wdpa_key <- wdpa_key %>% 
+  filter(wdpaid != 555564160) %>% 
+  mutate(wdpaid=ifelse(wdpaid==555564160, 41057, wdpaid))
+anyDuplicated(wdpa_key$wdpa_pid)
+
 # Contributions from versions
 table(wdpa_key$wdpa_yr)
 barplot(table(wdpa_key$wdpa_yr))
@@ -274,6 +304,7 @@ range(wdpa_old$gis_m_area, na.rm=T)
 
 # Final formatting
 wdpa_ts_final <- wdpa_ts %>%
+  # Reclassify IUCN categories
   mutate(iucn_cat=revalue(iucn_cat, c("Unknown"="unknown",
                                       "Not known"="unknown",
                                       "Not Known"="unknown", 
@@ -282,22 +313,30 @@ wdpa_ts_final <- wdpa_ts %>%
                                       "Not Reported"="not reported",
                                       "Unset"="unset", 
                                       "\x92W\xc0Ё\xdc\0204"="unknown")),
+         # Reclassify "marine" and "no take" categories
          marine=revalue(marine, c("false"="0",
                                  "N"="0",
                                  "No"="0",
                                  "true"="yes", 
                                  "Y"="yes",
+                                 "Yes"="yes",
                                  "Not Reported"="not reported",
                                  "\033"="unknown")),
          no_take=tolower(no_take),
+         # Reclassify status designations
          status=revalue(status, c("Designated\xa0"="Designated",
                                   "Desiganted"="Designated", 
                                   "OB@\xa0\\T\x8e"="Unknown")),
          status=tolower(status),
+         # Set all NA areas to 0 areas
+         rep_area=ifelse(is.na(rep_area), 0, rep_area),
+         gis_area=ifelse(is.na(gis_area), 0, gis_area),
+         rep_m_area=ifelse(is.na(rep_m_area), 0, rep_m_area),
+         gis_m_area=ifelse(is.na(gis_m_area), 0, gis_m_area),
          # Calculate marine area for pre-2010 WDPA
          # If pre-2010 and it is a marine MPA, marine area is equivalent to all area
-         rep_m_area=ifelse(year<2010 & marine=="yes", rep_area, 0),
-         gis_m_area=ifelse(year<2010 & marine=="yes", gis_area, 0),
+         rep_m_area=ifelse(year<2010 & marine=="yes" & !is.na(marine), rep_area, rep_m_area),
+         gis_m_area=ifelse(year<2010 & marine=="yes" & !is.na(marine), gis_area, gis_m_area),
          # Calculate terrestrial area
          rep_t_area=rep_area-rep_m_area,
          gis_t_area=gis_area-gis_m_area)
@@ -309,6 +348,13 @@ table(wdpa_ts_final$marine)
 table(wdpa_ts_final$no_take)
 table(wdpa_ts_final$status)
 
+# Reshape data for quick visualization
+# Area terms: rep_area, rep_m_area, gis_area, gis_m_area, no_tk_area
+wdpa_ts_m <- filter(wdpa_ts_final, marine %in% c("1", "2", "yes") & status %in% c("designated", "established")) 
+ts_rep <- dcast(wdpa_ts_m, wdpaid + wdpa_pid + name ~ year, value.var="rep_area")
+ts_rep_m <- dcast(wdpa_ts_m, wdpaid + wdpa_pid + name ~ year, value.var="rep_m_area")
+ts_rep_t <- dcast(wdpa_ts_m, wdpaid + wdpa_pid + name ~ year, value.var="rep_t_area")
+
 
 # Export data
 ################################################################################
@@ -318,6 +364,7 @@ wdpa_ts_merge <- wdpa_ts
 wdpa_ts <- wdpa_ts_final
 
 # Export
+write.csv(wdpa_key, paste(datadir, "2004-17_WDPA_MPA_key.csv", sep="/"), row.names=F)
 save(wdpa_ts, wdpa_key,
      file=paste(datadir, "2004-17_WDPA_time_series.Rdata", sep="/"))
 
