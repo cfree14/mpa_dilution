@@ -21,6 +21,7 @@ plotdir <- "figures"
 load(paste(datadir, "2004-17_WDPA_time_series.Rdata", sep="/"))
 
 # Subset data
+wdpa_ts_use <- filter(wdpa_ts, status %in% c("designated", "established"))
 wdpa_ts_m <- filter(wdpa_ts, marine %in% c("2", "yes") & status %in% c("designated", "established")) 
 wdpa_ts_b <- filter(wdpa_ts, marine %in% c("1") & status %in% c("designated", "established")) 
 wdpa_ts_t <- filter(wdpa_ts, marine %in% c("0") & status %in% c("designated", "established")) 
@@ -30,7 +31,7 @@ wdpa_ts_t <- filter(wdpa_ts, marine %in% c("0") & status %in% c("designated", "e
 ################################################################################
 
 # Reshape data
-ts <- dcast(wdpa_ts, wdpaid + wdpa_pid ~ year, value.var="marine") %>% 
+ts <- dcast(wdpa_ts_use, wdpaid + wdpa_pid ~ year, value.var="marine") %>% 
   left_join(select(wdpa_key, wdpa_pid, name, iso3, country), by="wdpa_pid") %>% 
   select(wdpaid, wdpa_pid, name, iso3, country, everything())
 anyDuplicated(ts$wdpa_pid)
@@ -94,7 +95,7 @@ find_additions <- function(wdpa_ts){
 }
 
 # Find expansions
-all <- find_additions(wdpa_ts)
+all <- find_additions(wdpa_ts_use)
 mpas_changed_all <- all[[1]]
 mpas_lost_all <- all[[2]]
 mpas_added_all <- all[[3]]
