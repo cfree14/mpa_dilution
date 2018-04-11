@@ -9,6 +9,7 @@ options(scipen=999)
 ################################################################################
 
 # Packages
+library(freeR)
 library(plyr)
 library(dplyr)
 library(rgdal)
@@ -282,6 +283,40 @@ anyDuplicated(wdpa_key$wdpa_pid)
 table(wdpa_key$wdpa_yr)
 barplot(table(wdpa_key$wdpa_yr))
   
+# Completeness
+complete(wdpa_key)
+
+# Fix PAs missing ISO3s
+pas_missing_iso3 <- subset(wdpa_key, is.na(iso3))
+# Add ISOs
+wdpa_key$iso3[wdpa_key$name=="Historic Area of Willemstad, Inner City and Harbour, Netherlands Antilles"] <- "ANT"
+wdpa_key$iso3[wdpa_key$name=="Old City of Jerusalem and its Walls"] <- "ISR"
+wdpa_key$iso3[wdpa_key$name=="De Wieden"] <- "NLD"
+wdpa_key$iso3[wdpa_key$name=="Bhoj Wetland/ Madhya Pradesh"] <- "IND"
+wdpa_key$iso3[wdpa_key$name=="Western Europe (Belgium, France, Ireland, Portugal, Spain and United Kingdom)"] <- "BEL; FRA; IRL; PRT; ESP; GBR"
+wdpa_key$iso3[wdpa_key$name=="Baltic Sea Area (Denmark, Estonia, Finland, Germany, Latvia, Lithuania, Poland & Sweden)"] <- "DNK; EST; FIN; DEU; LVA; LTU; POL; SWE"
+# Add countries
+wdpa_key$country[wdpa_key$name=="Historic Area of Willemstad, Inner City and Harbour, Netherlands Antilles"] <- "Netherlands Antilles"
+wdpa_key$country[wdpa_key$name=="Old City of Jerusalem and its Walls"] <- "Israel"
+wdpa_key$country[wdpa_key$name=="De Wieden"] <- "Netherlands"
+wdpa_key$country[wdpa_key$name=="Bhoj Wetland/ Madhya Pradesh"] <- "India"
+wdpa_key$country[wdpa_key$name=="Western Europe (Belgium, France, Ireland, Portugal, Spain and United Kingdom)"] <- "Belgium; France; Ireland; Portugal; Spain; United Kingdom"
+wdpa_key$country[wdpa_key$name=="Baltic Sea Area (Denmark, Estonia, Finland, Germany, Latvia, Lithuania, Poland & Sweden)"] <- "Denmark; Estonia; Finland; Germany; Latvia; Lithuania; Poland; Sweden"
+# Check again
+subset(wdpa_key, is.na(iso3))
+
+# Fix PAs missing countries
+pas_missing_countries <- subset(wdpa_key, is.na(country))
+wdpa_key$country[wdpa_key$iso3=="ABNJ"] <- "Areas Beyond National Jurisdiction"
+wdpa_key$country[wdpa_key$iso3=="ROM"] <- "Romania"
+wdpa_key$iso3[wdpa_key$iso3=="ROM"] <- "ROU"
+wdpa_key$country[wdpa_key$iso3=="SCG"] <- "Serbia & Montenegro"
+wdpa_key$country[wdpa_key$iso3=="YUG"] <- "Yugoslavia"
+wdpa_key$country[wdpa_key$iso3=="ANT"] <- "Netherlands Antilles"
+
+# !!!!!!!!!!!!!!!!!!!!
+# A BUNCH OF MULTI-COUNTRY PAs REMAIN UNCLEANED!!!
+# !!!!!!!!!!!!!!!!!!!!
 
 # Final clean up
 ################################################################################
@@ -339,14 +374,19 @@ wdpa_ts_final <- wdpa_ts %>%
          gis_m_area=ifelse(year<2010 & marine=="yes" & !is.na(marine), gis_area, gis_m_area),
          # Calculate terrestrial area
          rep_t_area=rep_area-rep_m_area,
-         gis_t_area=gis_area-gis_m_area)
-
-
+         gis_t_area=gis_area-gis_m_area) %>% 
+  # Add corrected ISO3/country
+  select(-iso3, -country) %>% 
+  left_join(select(wdpa_key, wdpa_pid, iso3, country), by="wdpa_pid")
+  
 # Inspect formatting
 table(wdpa_ts_final$iucn_cat)
 table(wdpa_ts_final$marine)
 table(wdpa_ts_final$no_take)
 table(wdpa_ts_final$status)
+
+# Completeness
+complete(wdpa_ts_final)
 
 # Reshape data for quick visualization
 # Area terms: rep_area, rep_m_area, gis_area, gis_m_area, no_tk_area
