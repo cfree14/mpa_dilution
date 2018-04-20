@@ -29,14 +29,14 @@ wdpa_ts_m <- filter(wdpa_ts, marine %in% c("1", "2", "yes") & status %in% c("des
 wdpa_ts_t <- filter(wdpa_ts, marine %in% c(0, 1) & status %in% c("designated", "established")) 
 
 # Reshape marine data
-ts_rep_m <- dcast(wdpa_ts_m, wdpaid + wdpa_pid ~ year, value.var="rep_m_area") %>% 
+ts_rep_m <- dcast(wdpa_ts_m, wdpaid + wdpa_pid ~ year, value.var="pref_m_area") %>% 
   left_join(select(wdpa_key, wdpa_pid, name, iso3, country), by="wdpa_pid") %>% 
   select(wdpaid, wdpa_pid, name, iso3, country, everything())
 ts_rep_m[ts_rep_m==0] <- NA
 anyDuplicated(ts_rep_m$wdpa_pid)
 
 # Reshape terrestrial data
-ts_rep_t <- dcast(wdpa_ts_t, wdpaid + wdpa_pid ~ year, value.var="rep_t_area") %>% 
+ts_rep_t <- dcast(wdpa_ts_t, wdpaid + wdpa_pid ~ year, value.var="pref_t_area") %>% 
   left_join(select(wdpa_key, wdpa_pid, name, iso3, country), by="wdpa_pid") %>% 
   select(wdpaid, wdpa_pid, name, iso3, country, everything())
 ts_rep_t[ts_rep_t==0] <- NA
@@ -111,8 +111,8 @@ find_expansions <- function(wdpa_ts, area_metric, perc_thresh){
 ################################################################################
 
 # Identify spatial expansion/contraction events
-events_m <- find_expansions(wdpa_ts_m, "rep_m_area", 10)
-events_t <- find_expansions(wdpa_ts_t, "rep_t_area", 10)
+events_m <- find_expansions(wdpa_ts_m, "pref_m_area", 10)
+events_t <- find_expansions(wdpa_ts_t, "pref_t_area", 10)
 
 # Export data
 write.csv(events_m, paste(datadir, "2004-17_indiv_change_events_marine.csv", sep="/"), row.names=F)
