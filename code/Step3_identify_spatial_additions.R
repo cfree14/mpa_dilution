@@ -40,7 +40,7 @@ anyDuplicated(ts$wdpa_pid)
 write.csv(ts, paste(datadir, "2004-17_pa_type_time_series_wide.csv", sep="/"), row.names=F)
 
 
-# Function to identify spatial expandions
+# Function to identify spatial expansions
 ################################################################################
 
 # For testing: wdpa_ts <- wdpa_ts_m
