@@ -329,7 +329,12 @@ table(wdpa_ts$iucn_cat)
 table(wdpa_ts$marine)
 table(wdpa_ts$no_take)
 table(wdpa_ts$status)
+table(wdpa_ts$sub_loc) # needs lots of formatting - not worth my time
+table(wdpa_ts$int_crit) # needs lots of formatting - not worth my time
 table(wdpa_ts$gov_type) # needs lots of formatting - not worth my time
+table(wdpa_ts$own_type) # needs lots of formatting - not worth my time
+table(wdpa_ts$mang_auth) # needs lots of formatting - not worth my time
+table(wdpa_ts$mang_plan) # needs lots of formatting - not worth my time
 
 # Pre-2010
 wdpa_old <- subset(wdpa_ts, year < 2010)
@@ -374,10 +379,22 @@ wdpa_ts_final <- wdpa_ts %>%
          gis_m_area=ifelse(year<2010 & marine=="yes" & !is.na(marine), gis_area, gis_m_area),
          # Calculate terrestrial area
          rep_t_area=rep_area-rep_m_area,
-         gis_t_area=gis_area-gis_m_area) %>% 
+         gis_t_area=gis_area-gis_m_area,
+         # Add "preferred" areas
+         pref_area=ifelse(gis_area!=0, gis_area, rep_area),
+         pref_m_area=ifelse(gis_m_area!=0, gis_m_area, rep_m_area),
+         pref_t_area=ifelse(gis_m_area!=0, gis_m_area, rep_m_area)) %>% 
   # Add corrected ISO3/country
   select(-iso3, -country) %>% 
-  left_join(select(wdpa_key, wdpa_pid, iso3, country), by="wdpa_pid")
+  left_join(select(wdpa_key, wdpa_pid, iso3, country), by="wdpa_pid") %>% 
+  # Rearrange columns
+  select(shp_type:orig_name, 
+         parent_iso, iso3, country, sub_loc,
+         desig:int_crit, status:mang_plan, 
+         marine, no_take, no_tk_area,
+         gis_area, rep_area, pref_area, 
+         gis_m_area, rep_m_area, pref_m_area,
+         gis_t_area, rep_t_area, pref_t_area, everything())
   
 # Inspect formatting
 table(wdpa_ts_final$iucn_cat)
