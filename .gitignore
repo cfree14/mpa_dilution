@@ -2,6 +2,7 @@
 .Rhistory
 .RData
 .Ruserdata
+data/wdpa_shps
 data/wdpa_dbfs
 data/wdpa_dbfs_2008
 data/WDPA_Dec2017-shapefile
