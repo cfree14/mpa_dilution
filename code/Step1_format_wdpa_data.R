@@ -282,7 +282,7 @@ anyDuplicated(wdpa_key$wdpa_pid)
 # Contributions from versions
 table(wdpa_key$wdpa_yr)
 barplot(table(wdpa_key$wdpa_yr))
-  
+
 # Completeness
 complete(wdpa_key)
 
@@ -318,8 +318,7 @@ wdpa_key$country[wdpa_key$iso3=="ANT"] <- "Netherlands Antilles"
 # A BUNCH OF MULTI-COUNTRY PAs REMAIN UNCLEANED!!!
 # !!!!!!!!!!!!!!!!!!!!
 
-
-# Clean WDPA time series
+# Final clean up
 ################################################################################
 
 # Inspect data
@@ -344,7 +343,7 @@ range(wdpa_old$rep_m_area, na.rm=T)
 range(wdpa_old$gis_m_area, na.rm=T)
 
 # Final formatting
-wdpa_ts1 <- wdpa_ts %>%
+wdpa_ts_final <- wdpa_ts %>%
   # Reclassify IUCN categories
   mutate(iucn_cat=revalue(iucn_cat, c("Unknown"="unknown",
                                       "Not known"="unknown",
@@ -356,28 +355,35 @@ wdpa_ts1 <- wdpa_ts %>%
                                       "\x92W\xc0Ё\xdc\0204"="unknown")),
          # Reclassify "marine" and "no take" categories
          marine=revalue(marine, c("false"="0",
-                                 "N"="0",
-                                 "No"="0",
-                                 "true"="yes", 
-                                 "Y"="yes",
-                                 "Yes"="yes",
-                                 "Not Reported"="not reported",
-                                 "\033"="unknown")),
+                                  "N"="0",
+                                  "No"="0",
+                                  "true"="yes", 
+                                  "Y"="yes",
+                                  "Yes"="yes",
+                                  "Not Reported"="not reported",
+                                  "\033"="unknown")),
          no_take=tolower(no_take),
          # Reclassify status designations
          status=revalue(status, c("Designated\xa0"="Designated",
                                   "Desiganted"="Designated", 
                                   "OB@\xa0\\T\x8e"="Unknown")),
          status=tolower(status),
-         # Set all 0 areas to NA areas
-         rep_area=ifelse(rep_area==0, NA, rep_area),
-         gis_area=ifelse(gis_area==0, NA, gis_area),
-         rep_m_area=ifelse(rep_m_area==0, NA, rep_m_area),
-         gis_m_area=ifelse(gis_m_area==0, NA, gis_m_area),
+         # Set all NA areas to 0 areas
+         rep_area=ifelse(is.na(rep_area), 0, rep_area),
+         gis_area=ifelse(is.na(gis_area), 0, gis_area),
+         rep_m_area=ifelse(is.na(rep_m_area), 0, rep_m_area),
+         gis_m_area=ifelse(is.na(gis_m_area), 0, gis_m_area),
          # Calculate marine area for pre-2010 WDPA
          # If pre-2010 and it is a marine MPA, marine area is equivalent to all area
          rep_m_area=ifelse(year<2010 & marine=="yes" & !is.na(marine), rep_area, rep_m_area),
-         gis_m_area=ifelse(year<2010 & marine=="yes" & !is.na(marine), gis_area, gis_m_area)) %>% 
+         gis_m_area=ifelse(year<2010 & marine=="yes" & !is.na(marine), gis_area, gis_m_area),
+         # Calculate terrestrial area
+         rep_t_area=rep_area-rep_m_area,
+         gis_t_area=gis_area-gis_m_area,
+         # Add "preferred" areas
+         pref_area=ifelse(gis_area!=0, gis_area, rep_area),
+         pref_m_area=ifelse(gis_m_area!=0, gis_m_area, rep_m_area),
+         pref_t_area=ifelse(gis_m_area!=0, gis_m_area, rep_m_area)) %>% 
   # Add corrected ISO3/country
   select(-iso3, -country) %>% 
   left_join(select(wdpa_key, wdpa_pid, iso3, country), by="wdpa_pid") %>% 
@@ -386,54 +392,18 @@ wdpa_ts1 <- wdpa_ts %>%
          parent_iso, iso3, country, sub_loc,
          desig:int_crit, status:mang_plan, 
          marine, no_take, no_tk_area,
-         gis_area, rep_area,
-         gis_m_area, rep_m_area,
-         everything())
-  
+         gis_area, rep_area, pref_area, 
+         gis_m_area, rep_m_area, pref_m_area,
+         gis_t_area, rep_t_area, pref_t_area, everything())
+
 # Inspect formatting
-table(wdpa_ts1$iucn_cat)
-table(wdpa_ts1$marine)
-table(wdpa_ts1$no_take)
-table(wdpa_ts1$status)
+table(wdpa_ts_final$iucn_cat)
+table(wdpa_ts_final$marine)
+table(wdpa_ts_final$no_take)
+table(wdpa_ts_final$status)
 
 # Completeness
-complete(wdpa_ts1)
-
-
-# Fix area problems
-################################################################################
-
-# Is there ever a reported area but no GIS area?
-sum(!is.na(wdpa_ts1$rep_area) & is.na(wdpa_ts1$gis_area) & wdpa_ts1$shp_type=="polygon")
-
-
-
-# Calculate GIS/reported area ratio
-wdpa_ts2 <- wdpa_ts1 %>% 
-  mutate(area_ratio=gis_area/rep_area)
-
-# Plot area ratios
-# Assumption: Reported area in sq. km and GIS area sometimes in hectares
-range(wdpa_ts2$area_ratio, na.rm=T)
-range(wdpa_ts2$area_ratio, na.rm=T)
-
-
-
-# Set all NA areas to 0 areas
-rep_area=ifelse(is.na(rep_area), 0, rep_area),
-gis_area=ifelse(is.na(gis_area), 0, gis_area),
-rep_m_area=ifelse(is.na(rep_m_area), 0, rep_m_area),
-gis_m_area=ifelse(is.na(gis_m_area), 0, gis_m_area),
-# Calculate terrestrial area
-rep_t_area=rep_area-rep_m_area,
-gis_t_area=gis_area-gis_m_area,
-# Add "preferred" areas
-pref_area=ifelse(gis_area!=0, gis_area, rep_area),
-pref_m_area=ifelse(gis_m_area!=0, gis_m_area, rep_m_area),
-pref_t_area=ifelse(gis_t_area!=0, gis_t_area, rep_t_area)) %>% 
-
-
-
+complete(wdpa_ts_final)
 
 # Reshape data for quick visualization
 # Area terms: rep_area, rep_m_area, gis_area, gis_m_area, no_tk_area
@@ -454,5 +424,3 @@ wdpa_ts <- wdpa_ts_final
 write.csv(wdpa_key, paste(datadir, "2004-17_WDPA_MPA_key.csv", sep="/"), row.names=F)
 save(wdpa_ts, wdpa_key,
      file=paste(datadir, "2004-17_WDPA_time_series.Rdata", sep="/"))
-
-
