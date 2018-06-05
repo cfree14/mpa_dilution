@@ -26,15 +26,16 @@ outputdir <- "data"
 ################################################################################
 
 # Years
-shps <- list.files(datadir)
+all_files <- list.files(datadir)
+rds_files <- all_files[grepl(".Rds", all_files)]
 
 # Loop through years: i <- 1
-for(i in 1:length(shps)){
+for(i in 1:length(rds_files)){
   
   # Read data
-  shp <- shps[i]
-  yr <- as.numeric(substr(gsub("temp_wdpa_v2_02_yr_", "", shp), 1, 4))
-  yr_data <- readRDS(file.path(datadir, shp))
+  rds_file <- rds_files[i]
+  yr <- as.numeric(substr(gsub("temp_wdpa_v2_02_yr_", "", rds_file), 1, 4))
+  yr_data <- readRDS(file.path(datadir, rds_file))
   yr_data$year <- yr
   print(yr)
   
@@ -46,6 +47,19 @@ for(i in 1:length(shps)){
 
 }
 
+# Add in DBF files for 2015-2017 (areas were calculated in ArcGIS b/c corrupted for R)
+data15 <- read.dbf(file.path(datadir, "2015_wdpa_poly_corr_area.dbf"))
+data16 <- read.dbf(file.path(datadir, "2016_wdpa_poly_corr_area.dbf"))
+data15 <- data15 %>% 
+  rename(gis_area_sqkm=AREA_SQKM, PARENT_ISO3=PARENT_ISO) %>% 
+  mutate(year=2015)
+data16 <- data16 %>% 
+  rename(gis_area_sqkm=AREA_SQKM, PARENT_ISO3=PARENT_ISO) %>% 
+  mutate(year=2016)
+data1516 <- rbind.fill(data15, data16)
+data_orig <- rbind.fill(data_orig, data1516)
+
+
 # Format data
 ################################################################################
 
@@ -53,7 +67,7 @@ for(i in 1:length(shps)){
 colnames(data_orig) <- tolower(colnames(data_orig))
 data <- data_orig %>% 
   # Remove columns
-  select(-c(shape_length, shape_area, version, verif, metadataid)) %>% 
+  select(-c(objectid, shape_leng, shape_length, shape_area, version, verif, metadataid)) %>% 
   # Rearrange columns
   select(year, wdpaid, wdpa_pid, name, orig_name, 
          iso3, parent_iso3, sub_loc, status, status_yr,
@@ -111,7 +125,6 @@ complete(wdpa_key)
 
 # Format WDPA time series
 ################################################################################
-
 
 # Final formatting
 wdpa_ts <- data %>%
