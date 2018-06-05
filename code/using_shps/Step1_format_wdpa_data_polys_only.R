@@ -47,16 +47,28 @@ for(i in 1:length(rds_files)){
 
 }
 
-# Add in DBF files for 2015-2017 (areas were calculated in ArcGIS b/c corrupted for R)
+# 2015 data
+# Remove MPAs with duplicated WDPAIDs
 data15 <- read.dbf(file.path(datadir, "2015_wdpa_poly_corr_area.dbf"))
-data16 <- read.dbf(file.path(datadir, "2016_wdpa_poly_corr_area.dbf"))
 data15 <- data15 %>% 
   rename(gis_area_sqkm=AREA_SQKM, PARENT_ISO3=PARENT_ISO) %>% 
   mutate(year=2015)
+dups15 <- sort(unique(data15$WDPAID[duplicated(data15$WDPAID)]))
+data15_dups <- arrange(filter(data15, WDPAID%in%dups15), WDPAID)
+data15_red <- filter(data15, !WDPAID%in%dups15)
+
+# 2016 data
+# Remove MPAs with duplicated WDPAIDs
+data16 <- read.dbf(file.path(datadir, "2016_wdpa_poly_corr_area.dbf"))
 data16 <- data16 %>% 
   rename(gis_area_sqkm=AREA_SQKM, PARENT_ISO3=PARENT_ISO) %>% 
   mutate(year=2016)
-data1516 <- rbind.fill(data15, data16)
+dups16 <- sort(unique(data16$WDPAID[duplicated(data16$WDPAID)]))
+data16_dups <- arrange(filter(data16, WDPAID%in%dups16), WDPAID)
+data16_red <- filter(data16, !WDPAID%in%dups16)
+
+# Merge data
+data1516 <- rbind.fill(data15_red, data16_red)
 data_orig <- rbind.fill(data_orig, data1516)
 
 
