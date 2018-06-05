@@ -148,19 +148,17 @@ wdpa_ts <- data %>%
                                   "\033"="unknown")),
          no_take=tolower(no_take),
          # Reclassify status designations
-         status=revalue(status, c("Designated\xa0"="Designated",
-                                  "Desiganted"="Designated", 
-                                  "Designated "="Designated",
-                                  "Degazzeted"="Degazetted",
-                                  "OB@\xa0\\T\x8e"="Unknown",
-                                  "OB@ \\TŽ"="Unknown")),
-         status=tolower(status))
+         status=trimws(tolower(status)),
+         status=revalue(status, c("desiganted"="designated",
+                                  "degazzeted"="degazetted",
+                                  "extended/reduce"="extended/reduced")))
 
 # Inspect formatting
 table(wdpa_ts$iucn_cat)
 table(wdpa_ts$marine)
 table(wdpa_ts$no_take)
 table(wdpa_ts$status)
+sort(unique(wdpa_ts$status))
 
 # Export data
 ################################################################################
