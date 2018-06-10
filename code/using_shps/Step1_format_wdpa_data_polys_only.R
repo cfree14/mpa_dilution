@@ -163,9 +163,12 @@ wdpa_ts <- data %>%
          status=trimws(tolower(status)),
          status=revalue(status, c("desiganted"="designated",
                                   "degazzeted"="degazetted",
-                                  "extended/reduce"="extended/reduced")))
+                                  "extended/reduce"="extended/reduced")),
+         # Fix status years) %>% 
+         status_yr=ifelse(status_yr%in%1800:2018, status_yr, NA))
 
 # Inspect formatting
+table(wdpa_ts$status_yr)
 table(wdpa_ts$iucn_cat)
 table(wdpa_ts$marine)
 table(wdpa_ts$no_take)
