@@ -35,17 +35,9 @@ fc_list <- ogrListLayers(fgdb)
 print(fc_list)
 
 # Read and format countries
-# cntry <- readOGR(dsn="data/World_Countries_Generalized", 
-#                  layer="World_Countries_Generalized")
-# cntry_moll <- spTransform(cntry, moll)
-# # plot(cntry_moll)
-# cntry_moll_dis <- gUnaryUnion(cntry_moll)
-# # plot(cntry_moll_dis)
 cntry <- readOGR(dsn="data/TM_WORLD_BORDERS_SIMPL-0.3", 
                  layer="TM_WORLD_BORDERS_SIMPL-0.3")
-# plot(cntry)
 cntry_dis <- gUnaryUnion(cntry)
-# plot(cntry_dis)
 
 # Loop through files
 ################################################################################
