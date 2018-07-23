@@ -6,6 +6,8 @@ data/wdpa_shps
 data/wdpa_dbfs
 data/wdpa_dbfs_2008
 data/WDPA_Dec2017-shapefile
+data/World_Countries_Generalized
+data/TM_WORLD_BORDERS_SIMPL-0.3
 drafts
 data/2004-17_network_change_events.csv
 cfree14_pa_dilution.Rproj
