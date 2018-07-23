@@ -66,9 +66,10 @@ for(i in 1:length(polys)){
   
   # 1. Read feature class
   poly <- polys[i]
+  print(paste(i, poly))
   yr <- as.numeric(substr(gsub("temp_wdpa_v2_02_yr_", "", poly), 1, 4))
   print(paste(i, poly))
-  fc <- readOGR(dsn=fgdb, layer=poly)
+  fc <- readOGR(dsn=fgdb, layer=poly, verbose=F)
   fc_data <- fc@data
   
   # 2. Dissolve by country
