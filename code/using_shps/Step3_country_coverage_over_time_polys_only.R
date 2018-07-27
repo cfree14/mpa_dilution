@@ -39,7 +39,8 @@ print(fc_list)
 cntry <- readOGR(dsn="data/TM_WORLD_BORDERS_SIMPL-0.3", 
                  layer="TM_WORLD_BORDERS_SIMPL-0.3", verbose=F)
 cntry <- gUnaryUnion(cntry)
-cntry <- spTransform(cntry, moll)
+cntry <- spTransform(cntry, wgs84)
+# cntry <- spTransform(cntry, moll)
 
 # Loop through files
 ################################################################################
@@ -48,7 +49,7 @@ cntry <- spTransform(cntry, moll)
 polys <- sort(fc_list[grepl("*poly$", fc_list)])
 
 # Loop through polygon files
-for(i in 5:length(polys)){
+for(i in 10:length(polys)){
   
   # 1. Read feature class
   poly <- polys[i]
@@ -66,8 +67,9 @@ for(i in 5:length(polys)){
   # table(fc$status)
   
   # 3. Project and buffer to fix potential geometry problems
-  fc <- spTransform(fc, moll)
+  fc <- spTransform(fc, moll) # convert to Moll for buffer
   fc <- gBuffer(fc, byid=TRUE, width=0) # 0 width buffer fixes some topology problems
+  fc <- spTransform(fc, wgs84) # convert to WGS54 for clip/erase later
   
   # 3. Dissolve by country
   fc <- gUnaryUnion(fc, id = fc@data$ISO3)
@@ -78,21 +80,21 @@ for(i in 5:length(polys)){
               n_wdpapid=n_distinct(WDPA_PID),
               tot_gis_area=sum(GIS_AREA)) %>% 
     rename(iso3=ISO3)
-  fc_spdf <- SpatialPolygonsDataFrame(Sr=fc, data=fc_stats)
+  fc <- SpatialPolygonsDataFrame(Sr=fc, data=fc_stats)
   # plot(fc_iso3_spdf[sample(1:nrow(fc_iso3_spdf@data), size=50),])
   
   # 4. Loop through countries
-  isos <- as.character(fc_iso3_spdf$iso3)
+  isos <- as.character(fc$iso3)
   area_df <- data.frame(iso3=isos, mpa_sqkm=NA, tpa_sqkm=NA, error=NA)
   for(j in 1:length(isos)){
     
     # Subset data
     iso <- isos[j]
     print(paste0("...", j, " ", iso))
-    sdata <- subset(fc_iso3_spdf, iso3==iso)
+    sdata <- subset(fc, iso3==iso)
     
     # Land stuff
-    land <- try(gIntersection(sdata, cntry_dis))
+    land <- try(gIntersection(sdata, cntry))
     if(inherits(land, "try-error")){
       area_df$error[j] <- "geometry problem"
     }else{
@@ -103,7 +105,7 @@ for(i in 5:length(polys)){
     }
     
     # Water stuff
-    water <- try(gDifference(sdata, cntry_dis))
+    water <- try(gDifference(sdata, cntry))
     if(inherits(water, "try-error")){
       area_df$error[j] <- "geometry problem"
     }else{
