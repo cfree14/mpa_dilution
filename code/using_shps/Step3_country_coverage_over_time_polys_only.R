@@ -62,7 +62,6 @@ for(i in 5:length(polys)){
   
   # 2. Subset useful data
   fc <- subset(fc, status %in% c("designated", "established") | is.na(status))
-  fc <- readOGR(dsn=fgdb, layer=poly, verbose=F)
   fc_data <- fc@data
   # table(fc$status)
   
